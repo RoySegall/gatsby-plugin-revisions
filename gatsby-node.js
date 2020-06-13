@@ -8,21 +8,25 @@ exports.onCreateDevServer = ({ app }) => {
   const publicPath = path.join(process.cwd(), 'public');
 
   app.get('/revisions', function(req, res) {
-    const files = fs.readdirSync(revisionsPath);
-    res.send(files);
+    // Return the list of directories, i.e: revisions.
+    const directories = fs.readdirSync(revisionsPath);
+    res.send(directories);
   })
 
   app.post('/revision-revert/:revision', function(req, res) {
     const revision = req.params.revision;
     ncp(path.join(revisionsPath, revision), publicPath);
-    res.send('reverted');
+
+    res.status(200).send({message: `The revision ${revision} has been reverted.`});
   })
 
   app.post('/revision', function (req, res) {
+    // First, we need to build our current timestamp.
     execSync('gatsby build');
 
     if (!fs.existsSync(publicPath)) {
-      // The public path does not exists. Skip.
+      // The public path does not exists, maybe gatsby could not build the site, so we'll return an error.s
+      res.status(400).send({message: 'An error occurred while creating the revision. Look at the logs.'});
       return;
     }
 
@@ -34,9 +38,10 @@ exports.onCreateDevServer = ({ app }) => {
     // No limit, because why not?
     ncp.limit = 0;
 
-    const futureRevisionFolder = `${revisionsPath}/${Date.now()}`;
+    const revisionTimeStamp = Date.now();
+    const futureRevisionFolder = `${revisionsPath}/${revisionTimeStamp}`;
     ncp(publicPath, futureRevisionFolder);
 
-    res.send('hello world')
+    res.send({message: 'Revision has created', revisionId: revisionTimeStamp})
   })
 }
