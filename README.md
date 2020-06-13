@@ -8,8 +8,12 @@ will insure that in case you made a mistake you can bring back the site as it wa
 you'll be able to work on the content and deliver the new content with the fixes.
 
 ## Installation
-For now, until there's an NPM repo, clone the repo and place under the `plugins` library which need to be located in 
-the root folder next to the `src` folder.
+
+Install the package from:
+
+```bash
+npm i gatsby-plugin-revisions
+```
 
 In the `gatsby-config.js` add the plugin to the list of plugins:
 
