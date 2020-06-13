@@ -2,8 +2,13 @@
   "name": "gatsby-plugin-revisions",
   "version": "1.0.0",
   "description": "Creating revisions for builds",
-  "author": "RoySegall",
-  "license": "ISC",
+  "homepage": "https://github.com/RoySegall/gatsby-plugin-revisions",
+  "author": "RoySegall <roy@segall.io>",
+  "license": "MIT",
+  "repository": "RoySegall/gatsby-plugin-revisions",
+  "keywords": [
+    "gatsbyjs"
+  ],
   "dependencies": {
     "fs-extra": "^9.0.1",
     "ncp": "^2.0.0"
