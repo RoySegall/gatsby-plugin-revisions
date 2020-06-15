@@ -1,11 +1,14 @@
 const fs = require('fs');
 const path = require('path');
 const ncp = require("ncp");
-const { execSync } = require("child_process");
+const { spawn } = require("child_process");
 
-exports.onCreateDevServer = ({ app }) => {
+exports.onCreateDevServer = ({ app, reporter, options }, pluginOptions) => {
+  console.log(options)
   const revisionsPath = path.join(process.cwd(), 'revisions');
   const publicPath = path.join(process.cwd(), 'public');
+
+  reporter.success('Gatsby revision plugin is ready');
 
   app.get('/revisions', function(req, res) {
     // Return the list of directories, i.e: revisions.
@@ -21,27 +24,31 @@ exports.onCreateDevServer = ({ app }) => {
   })
 
   app.post('/revision', function (req, res) {
-    // First, we need to build our current timestamp.
-    execSync('gatsby build');
-
-    if (!fs.existsSync(publicPath)) {
-      // The public path does not exists, maybe gatsby could not build the site, so we'll return an error.s
-      res.status(400).send({message: 'An error occurred while creating the revision. Look at the logs.'});
-      return;
-    }
-
-    if (!fs.existsSync(revisionsPath)) {
-      // The revision folder does not exists.
-      fs.mkdirSync(revisionsPath);
-    }
-
-    // No limit, because why not?
-    ncp.limit = 0;
+    console.log(pluginOptions.eventsAddressBroadcast);
 
     const revisionTimeStamp = Date.now();
-    const futureRevisionFolder = `${revisionsPath}/${revisionTimeStamp}`;
-    ncp(publicPath, futureRevisionFolder);
 
-    res.send({message: 'Revision has created', revisionId: revisionTimeStamp})
+    const ls = spawn('npm', ['run', 'build']);
+
+    ls.stderr.on('data', (data) => {
+      // Send here a failure event.
+    });
+
+    ls.on('close', (code) => {
+      if (!fs.existsSync(revisionsPath)) {
+        // The revision folder does not exists.
+        fs.mkdirSync(revisionsPath);
+      }
+
+      // No limit, because why not?
+      ncp.limit = 0;
+
+      const futureRevisionFolder = `${revisionsPath}/${revisionTimeStamp}`;
+      ncp(publicPath, futureRevisionFolder);
+
+      // Send the success.
+    });
+
+    res.send({message: 'Revision will be created', revisionId: revisionTimeStamp})
   })
 }

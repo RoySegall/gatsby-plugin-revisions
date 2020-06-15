@@ -57,7 +57,7 @@ Which will return
 
 ### Revert to a revision
 ```REST
-GET http://localhost:8000/revision-revert/:revision-id
+POST http://localhost:8000/revision-revert/:revision-id
 
     * :revision-id: The number of the revision.
 ```
