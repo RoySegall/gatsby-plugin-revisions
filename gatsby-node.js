@@ -8,6 +8,19 @@ exports.onCreateDevServer = ({ app, reporter }, pluginOptions) => {
   const revisionsPath = path.join(process.cwd(), 'revisions');
   const publicPath = path.join(process.cwd(), 'public');
 
+  const notifyEventListener = (data) => {
+
+    if (!pluginOptions.eventsAddressBroadcast) {
+      return;
+    }
+
+    axios.post(pluginOptions.eventsAddressBroadcast, data).then((response) => {
+      reporter.success('The event has been arrived to the listener');
+    }, (error) => {
+      reporter.error(error);
+    });
+  };
+
   reporter.success('Gatsby revision plugin is ready');
 
   app.get('/revisions', function(req, res) {
@@ -31,15 +44,11 @@ exports.onCreateDevServer = ({ app, reporter }, pluginOptions) => {
     ls.stderr.on('data', (data) => {
       reporter.error(`An error during creating the revision: ${data}`);
 
-      // todo: move to an API.
-      axios.post(pluginOptions.eventsAddressBroadcast, {
+      notifyEventListener({
         event: 'revision_creation',
         status: 'failed',
+        revisionId: revisionTimeStamp,
         data: data,
-      }).then((response) => {
-        reporter.success('The event has been arrived to the listener');
-      }, (error) => {
-        reporter.error(error);
       });
     });
 
@@ -60,16 +69,11 @@ exports.onCreateDevServer = ({ app, reporter }, pluginOptions) => {
 
       reporter.success(`The complied site has been copied to ${revisionTimeStamp}.`);
 
-      if (pluginOptions.eventsAddressBroadcast) {
-        axios.post(pluginOptions.eventsAddressBroadcast, {
-          event: 'revision_creation',
-          status: 'succeeded',
-        }).then((response) => {
-          reporter.success('The event has been arrived to the listener');
-        }, (error) => {
-          reporter.error(error);
-        });
-      }
+      notifyEventListener({
+        event: 'revision_creation',
+        status: 'succeeded',
+        revisionId: revisionTimeStamp,
+      });
     });
 
     reporter.success(`A revision will be created with the id ${revisionTimeStamp}`);
