@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const ncp = require("ncp");
 const { spawn } = require("child_process");
+const axios = require("axios");
 
 exports.onCreateDevServer = ({ app, reporter }, pluginOptions) => {
   const revisionsPath = path.join(process.cwd(), 'revisions');
@@ -23,8 +24,6 @@ exports.onCreateDevServer = ({ app, reporter }, pluginOptions) => {
   })
 
   app.post('/revision', function (req, res) {
-    console.log(pluginOptions.eventsAddressBroadcast);
-
     const revisionTimeStamp = Date.now();
 
     const ls = spawn('npm', ['run', 'build']);
@@ -32,7 +31,16 @@ exports.onCreateDevServer = ({ app, reporter }, pluginOptions) => {
     ls.stderr.on('data', (data) => {
       reporter.error(`An error during creating the revision: ${data}`);
 
-      // Send here a failure event.
+      // todo: move to an API.
+      axios.post(pluginOptions.eventsAddressBroadcast, {
+        event: 'revision_creation',
+        status: 'failed',
+        data: data,
+      }).then((response) => {
+        reporter.success('The event has been arrived to the listener');
+      }, (error) => {
+        reporter.error(error);
+      });
     });
 
     ls.on('close', (code) => {
@@ -51,6 +59,17 @@ exports.onCreateDevServer = ({ app, reporter }, pluginOptions) => {
       ncp(publicPath, futureRevisionFolder);
 
       reporter.success(`The complied site has been copied to ${revisionTimeStamp}.`);
+
+      if (pluginOptions.eventsAddressBroadcast) {
+        axios.post(pluginOptions.eventsAddressBroadcast, {
+          event: 'revision_creation',
+          status: 'succeeded',
+        }).then((response) => {
+          reporter.success('The event has been arrived to the listener');
+        }, (error) => {
+          reporter.error(error);
+        });
+      }
     });
 
     reporter.success(`A revision will be created with the id ${revisionTimeStamp}`);
