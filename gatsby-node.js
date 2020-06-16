@@ -3,8 +3,7 @@ const path = require('path');
 const ncp = require("ncp");
 const { spawn } = require("child_process");
 
-exports.onCreateDevServer = ({ app, reporter, options }, pluginOptions) => {
-  console.log(options)
+exports.onCreateDevServer = ({ app, reporter }, pluginOptions) => {
   const revisionsPath = path.join(process.cwd(), 'revisions');
   const publicPath = path.join(process.cwd(), 'public');
 
@@ -31,12 +30,17 @@ exports.onCreateDevServer = ({ app, reporter, options }, pluginOptions) => {
     const ls = spawn('npm', ['run', 'build']);
 
     ls.stderr.on('data', (data) => {
+      reporter.error(`An error during creating the revision: ${data}`);
+
       // Send here a failure event.
     });
 
     ls.on('close', (code) => {
+      reporter.success(`The build process for the revision ${revisionTimeStamp} completed.`);
+
       if (!fs.existsSync(revisionsPath)) {
         // The revision folder does not exists.
+        reporter.success(`The revision folder was created since it was not.`);
         fs.mkdirSync(revisionsPath);
       }
 
@@ -46,8 +50,10 @@ exports.onCreateDevServer = ({ app, reporter, options }, pluginOptions) => {
       const futureRevisionFolder = `${revisionsPath}/${revisionTimeStamp}`;
       ncp(publicPath, futureRevisionFolder);
 
-      // Send the success.
+      reporter.success(`The complied site has been copied to ${revisionTimeStamp}.`);
     });
+
+    reporter.success(`A revision will be created with the id ${revisionTimeStamp}`);
 
     res.send({message: 'Revision will be created', revisionId: revisionTimeStamp})
   })
