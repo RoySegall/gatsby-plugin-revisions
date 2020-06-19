@@ -23,6 +23,43 @@ module.exports = {
 }
 ```
 
+Use the plugin with settings:
+```js
+module.exports = {
+  /* Your site config here */
+  plugins: [
+    {
+      resolve: `gatsby-plugin-revisions`,
+      options: {
+        eventsAddressBroadcast: 'http://localhost/drupal/gatsby-revisions/event-listener'
+      }
+    },
+  ]
+}
+```
+
+**eventsAddressBroadcast**: When there's an event which can take a lot of time the plugin will send payload for 
+notifying the client which trigger the event which it can handle it later on:
+
+### Example 1:
+```json
+{
+    "event": "revision_creation",
+    "status": "failed",
+    "revisionId": 133465345,
+    "data": "Not enough space"
+}
+```
+
+### Example 2:
+```json
+{
+  "event": "revision_creation",
+  "status": "succeeded",
+  "revisionId": 233243123
+}
+```
+
 ## Endpoints
 
 There are a couple of interactions:
@@ -57,7 +94,7 @@ Which will return
 
 ### Revert to a revision
 ```REST
-GET http://localhost:8000/revision-revert/:revision-id
+POST http://localhost:8000/revision-revert/:revision-id
 
     * :revision-id: The number of the revision.
 ```

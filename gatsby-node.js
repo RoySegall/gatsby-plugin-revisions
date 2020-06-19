@@ -1,11 +1,27 @@
 const fs = require('fs');
 const path = require('path');
 const ncp = require("ncp");
-const { execSync } = require("child_process");
+const { spawn } = require("child_process");
+const axios = require("axios");
 
-exports.onCreateDevServer = ({ app }) => {
+exports.onCreateDevServer = ({ app, reporter }, pluginOptions) => {
   const revisionsPath = path.join(process.cwd(), 'revisions');
   const publicPath = path.join(process.cwd(), 'public');
+
+  const notifyEventListener = (data) => {
+
+    if (!pluginOptions.eventsAddressBroadcast) {
+      return;
+    }
+
+    axios.post(pluginOptions.eventsAddressBroadcast, data).then((response) => {
+      reporter.success('The event has been arrived to the listener');
+    }, (error) => {
+      reporter.error(error);
+    });
+  };
+
+  reporter.success('Gatsby revision plugin is ready');
 
   app.get('/revisions', function(req, res) {
     // Return the list of directories, i.e: revisions.
@@ -21,27 +37,47 @@ exports.onCreateDevServer = ({ app }) => {
   })
 
   app.post('/revision', function (req, res) {
-    // First, we need to build our current timestamp.
-    execSync('gatsby build');
-
-    if (!fs.existsSync(publicPath)) {
-      // The public path does not exists, maybe gatsby could not build the site, so we'll return an error.s
-      res.status(400).send({message: 'An error occurred while creating the revision. Look at the logs.'});
-      return;
-    }
-
-    if (!fs.existsSync(revisionsPath)) {
-      // The revision folder does not exists.
-      fs.mkdirSync(revisionsPath);
-    }
-
-    // No limit, because why not?
-    ncp.limit = 0;
-
     const revisionTimeStamp = Date.now();
-    const futureRevisionFolder = `${revisionsPath}/${revisionTimeStamp}`;
-    ncp(publicPath, futureRevisionFolder);
 
-    res.send({message: 'Revision has created', revisionId: revisionTimeStamp})
+    const ls = spawn('npm', ['run', 'build']);
+
+    ls.stderr.on('data', (data) => {
+      reporter.error(`An error during creating the revision: ${data}`);
+
+      notifyEventListener({
+        event: 'revision_creation',
+        status: 'failed',
+        revisionId: revisionTimeStamp,
+        data: data,
+      });
+    });
+
+    ls.on('close', (code) => {
+      reporter.success(`The build process for the revision ${revisionTimeStamp} completed.`);
+
+      if (!fs.existsSync(revisionsPath)) {
+        // The revision folder does not exists.
+        reporter.success(`The revision folder was created since it was not.`);
+        fs.mkdirSync(revisionsPath);
+      }
+
+      // No limit, because why not?
+      ncp.limit = 0;
+
+      const futureRevisionFolder = `${revisionsPath}/${revisionTimeStamp}`;
+      ncp(publicPath, futureRevisionFolder);
+
+      reporter.success(`The complied site has been copied to ${revisionTimeStamp}.`);
+
+      notifyEventListener({
+        event: 'revision_creation',
+        status: 'succeeded',
+        revisionId: revisionTimeStamp,
+      });
+    });
+
+    reporter.success(`A revision will be created with the id ${revisionTimeStamp}`);
+
+    res.send({message: 'Revision will be created', revisionId: revisionTimeStamp})
   })
 }
