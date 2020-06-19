@@ -1,6 +1,6 @@
 {
   "name": "gatsby-plugin-revisions",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Creating revisions for builds",
   "homepage": "https://github.com/RoySegall/gatsby-plugin-revisions",
   "author": "RoySegall <roy@segall.io>",
